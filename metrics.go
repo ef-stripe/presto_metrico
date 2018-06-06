@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"github.com/ooyala/go-dogstatsd"
-	"github.com/presto_metrico/Godeps/_workspace/src/github.com/ooyala/go-dogstatsd"
 )
 
 var (
