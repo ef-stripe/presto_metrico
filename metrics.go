@@ -16,7 +16,7 @@ var (
 	coordinator string // Global variable set via environment variable
 	jmxBeans    = map[string]string{
 		"queryManager":         "com.facebook.presto.execution:name=QueryManager",
-		"taskExecutor":         "com.facebook.presto.execution:name=TaskExecutor",
+		"taskExecutor":         "com.facebook.presto.execution.executor:name=TaskExecutor",
 		"taskManager":          "com.facebook.presto.execution:name=TaskManager",
 		"memoryPoolGeneral":    "com.facebook.presto.memory:type=MemoryPool,name=general",
 		"clusterMemoryManager": "com.facebook.presto.memory:name=ClusterMemoryManager",
