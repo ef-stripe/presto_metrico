@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/ooyala/go-dogstatsd"
 )
@@ -148,6 +149,21 @@ type JMXMetricAttribute struct {
 	Value interface{}
 }
 
+func (attr *JMXMetricAttribute) ValueToFloat64() (float64, error) {
+	switch valType := attr.Value.(type) {
+	case float64:
+		return attr.Value.(float64), nil
+	case string:
+		f, err := strconv.ParseFloat(attr.Value.(string), 64)
+		if err != nil {
+			return 0, err
+		}
+		return f, nil
+	default:
+		return 0, fmt.Errorf("unhandled type: %T\n", valType)
+	}
+}
+
 // JMXMetric represents the top level jmx metric.
 type JMXMetric struct {
 	ClassName  string
@@ -214,12 +230,17 @@ func getMetric(metricName string) (*JMXMetric, error) {
 	return &jmxMetric, err
 }
 
-func sendJMXMetric(client *dogstatsd.Client, metricCatagory string, attribute JMXMetricAttribute) {
+func sendJMXMetric(client *dogstatsd.Client, metricCatagory string, attribute JMXMetricAttribute) error {
 	_, ok := datadogMetrics[attribute.Name]
 	if ok {
 		datadogLabel := fmt.Sprintf("data.presto.%s.%s", metricCatagory, attribute.Name)
-		client.Gauge(datadogLabel, attribute.Value.(float64), nil, 1.0)
+		val, err := attribute.ValueToFloat64()
+		if err != nil {
+			return err
+		}
+		client.Gauge(datadogLabel, val, nil, 1.0)
 	}
+	return nil
 }
 
 // ProcessJMXMetrics retrieves and processes metrics from the presto coordinator
@@ -234,7 +255,10 @@ func ProcessJMXMetrics(client *dogstatsd.Client) {
 		}
 
 		for _, attribute := range metric.Attributes {
-			sendJMXMetric(client, metricName, attribute)
+			err := sendJMXMetric(client, metricName, attribute)
+			if err != nil {
+				log.Printf("failed to send metric %q: %v", metricName, err)
+			}
 		}
 	}
 }
