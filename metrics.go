@@ -2,20 +2,20 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 
+	// TODO: probably want to use https://github.com/DataDog/datadog-go now
 	"github.com/ooyala/go-dogstatsd"
 )
 
 var (
-	jmxSuffix   = "/v1/jmx/mbean/"
-	coordinator string // Global variable set via environment variable
-	jmxBeans    = map[string]string{
+	// TODO: document where this is from
+	jmxSuffix = "/v1/jmx/mbean/"
+	// TODO: should create as a public constand
+	jmxBeans = map[string]string{
 		"queryManager":         "com.facebook.presto.execution:name=QueryManager",
 		"taskExecutor":         "com.facebook.presto.execution.executor:name=TaskExecutor",
 		"taskManager":          "com.facebook.presto.execution:name=TaskManager",
@@ -23,6 +23,7 @@ var (
 		"clusterMemoryManager": "com.facebook.presto.memory:name=ClusterMemoryManager",
 	}
 
+	// TODO: do we really need to define all of this?
 	datadogMetrics = map[string]string{
 		"Executor.ActiveCount":                              "queryManager",
 		"Executor.QueuedTaskCount":                          "queryManager",
@@ -170,21 +171,14 @@ type JMXMetric struct {
 	Attributes []JMXMetricAttribute `json:"attributes"`
 }
 
-func setCoordinatorFromEnvironment() string {
-	if coordinator == "" {
-		coordinator = os.Getenv("PRESTO_COORDINATOR")
-	}
-	return coordinator
-}
-
 func getCoordinatorURI() string {
-	return fmt.Sprintf("%s%s", setCoordinatorFromEnvironment(), jmxSuffix)
+	return fmt.Sprintf("%s%s", *coordinator, jmxSuffix)
 }
 
 func buildMetricURI(metric string) (string, error) {
 	jmxString, ok := jmxBeans[metric]
 	if !ok {
-		return "", errors.New("Metric string was not found for metric")
+		return "", fmt.Errorf("metric string %q was not found", metric)
 	}
 
 	msg := fmt.Sprintf("%s%s", getCoordinatorURI(), jmxString)
@@ -196,61 +190,69 @@ func getHTTPRawResponse(uri string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return resp, err
 }
 
-func retriveRawMetricResponse(metricName string) (*http.Response, error) {
+func retrieveRawMetricResponse(metricName string) (*http.Response, error) {
 	uri, err := buildMetricURI(metricName)
-
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := getHTTPRawResponse(uri)
-	return resp, err
+	return getHTTPRawResponse(uri)
 }
 
-func decodeRawMetricResponse(resp *http.Response) (JMXMetric, error) {
-	defer resp.Body.Close()
-
+func decodeRawMetricResponse(resp *http.Response) (*JMXMetric, error) {
 	decoder := json.NewDecoder(resp.Body)
-	var jmxMetric JMXMetric
-	err := decoder.Decode(&jmxMetric)
+
+	var jmxMetric *JMXMetric
+	err := decoder.Decode(jmxMetric)
+
 	return jmxMetric, err
 }
 
 func getMetric(metricName string) (*JMXMetric, error) {
-	resp, err := retriveRawMetricResponse(metricName)
-
+	resp, err := retrieveRawMetricResponse(metricName)
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Println(err)
+		}
 
-	jmxMetric, err := decodeRawMetricResponse(resp)
-	return &jmxMetric, err
+	}()
+
+	return decodeRawMetricResponse(resp)
 }
 
 func sendJMXMetric(client *dogstatsd.Client, metricCatagory string, attribute JMXMetricAttribute) error {
 	_, ok := datadogMetrics[attribute.Name]
 	if ok {
 		datadogLabel := fmt.Sprintf("data.presto.%s.%s", metricCatagory, attribute.Name)
+
 		val, err := attribute.ValueToFloat64()
 		if err != nil {
 			return err
 		}
-		client.Gauge(datadogLabel, val, nil, 1.0)
+
+		err = client.Gauge(datadogLabel, val, nil, 1.0)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 // ProcessJMXMetrics retrieves and processes metrics from the presto coordinator
 // sending them to datadog server
-func ProcessJMXMetrics(client *dogstatsd.Client) {
+func ProcessJMXMetrics(client *statsd.Client) {
+	// TODO: do this concurrently
 	for metricName := range jmxBeans {
 		metric, err := getMetric(metricName)
-
 		if err != nil {
-			log.Println(err)
+			log.Printf("failed to resolve metric name %q: %v", metricName, err)
 			continue
 		}
 
@@ -258,6 +260,7 @@ func ProcessJMXMetrics(client *dogstatsd.Client) {
 			err := sendJMXMetric(client, metricName, attribute)
 			if err != nil {
 				log.Printf("failed to send metric %q: %v", metricName, err)
+				continue
 			}
 		}
 	}
