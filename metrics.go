@@ -134,10 +134,10 @@ var (
 		"TaskNotificationExecutor.ActiveCount":              "taskManager",
 		"TaskNotificationExecutor.PoolSize":                 "taskManager",
 		"TaskNotificationExecutor.QueuedTaskCount":          "taskManager",
-		"FreeBytes":                                         "memoryPoolGeneral",
-		"MaxBytes":                                          "memoryPoolGeneral",
-		"ClusterMemoryBytes":                                "clusterMemoryManager",
-		"ClusterMemoryUsageBytes":                           "clusterMemoryManager",
+		"FreeBytes":               "memoryPoolGeneral",
+		"MaxBytes":                "memoryPoolGeneral",
+		"ClusterMemoryBytes":      "clusterMemoryManager",
+		"ClusterMemoryUsageBytes": "clusterMemoryManager",
 	}
 )
 

@@ -1,0 +1,4 @@
+github.com/ooyala/go-dogstatsd v0.0.0-20140922214459-23f2a1659b02 h1:BrldciqsqeGN914jnfV5kXfbpmV7MH/pm6eHTtBKYUw=
+github.com/ooyala/go-dogstatsd v0.0.0-20140922214459-23f2a1659b02/go.mod h1:nflAKKj0ZA/Ow+PKVITxVi3ZGXjdWWllHNZj4wdPPQg=
+github.com/pborman/getopt v0.0.0-20130221175501-3b137f113d82 h1:M8xOBwJtRmdwcyhC6UznTog8hUMd4wwovNXkyl5uSFU=
+github.com/pborman/getopt v0.0.0-20130221175501-3b137f113d82/go.mod h1:85jBQOZwpVEaDAr341tbn15RS4fCAsIst0qp7i8ex1o=
