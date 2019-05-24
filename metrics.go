@@ -7,12 +7,13 @@ import (
 	"net/http"
 	"strconv"
 
-	// TODO: probably want to use https://github.com/DataDog/datadog-go now
-	"github.com/ooyala/go-dogstatsd"
+	"github.com/DataDog/datadog-go/statsd"
 )
 
+// TODO: https://docs.datadoghq.com/integrations/presto/
 var (
-	// TODO: document where this is from
+	// Presto exposes a REST endpoint to query various metrics
+	// e.g. '/v1/jmx/mbean/java.lang:type=OperatingSystem/ProcessCpuTime'
 	jmxSuffix = "/v1/jmx/mbean/"
 	// TODO: should create as a public constand
 	jmxBeans = map[string]string{
@@ -24,6 +25,7 @@ var (
 	}
 
 	// TODO: do we really need to define all of this?
+	// Also, the values don't seem to be used?
 	datadogMetrics = map[string]string{
 		"Executor.ActiveCount":                              "queryManager",
 		"Executor.QueuedTaskCount":                          "queryManager",
@@ -227,10 +229,11 @@ func getMetric(metricName string) (*JMXMetric, error) {
 	return decodeRawMetricResponse(resp)
 }
 
-func sendJMXMetric(client *dogstatsd.Client, metricCatagory string, attribute JMXMetricAttribute) error {
+func sendJMXMetric(client *statsd.Client, metricCatagory string, attribute JMXMetricAttribute) error {
+	// TODO: weird way of doing this
 	_, ok := datadogMetrics[attribute.Name]
 	if ok {
-		datadogLabel := fmt.Sprintf("data.presto.%s.%s", metricCatagory, attribute.Name)
+		datadogLabel := fmt.Sprintf("%s.%s", metricCatagory, attribute.Name)
 
 		val, err := attribute.ValueToFloat64()
 		if err != nil {
@@ -241,14 +244,16 @@ func sendJMXMetric(client *dogstatsd.Client, metricCatagory string, attribute JM
 		if err != nil {
 			return err
 		}
+	} else {
+		log.Printf("no known metric %q", attribute.Name)
 	}
+
 	return nil
 }
 
 // ProcessJMXMetrics retrieves and processes metrics from the presto coordinator
 // sending them to datadog server
 func ProcessJMXMetrics(client *statsd.Client) {
-	// TODO: do this concurrently
 	for metricName := range jmxBeans {
 		metric, err := getMetric(metricName)
 		if err != nil {
