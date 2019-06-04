@@ -12,7 +12,7 @@ func TestMain(m *testing.M) {
 
 func Setup() {
 	os.Setenv("PRESTO_COORDINATOR", "testomcpresto")
-	jmxBeans = map[string]string{"woot_zone": "this_is_a_test"}
+	JmxBeans = map[string]string{"woot_zone": "this_is_a_test"}
 }
 
 func TestBuildMetricUri(t *testing.T) {

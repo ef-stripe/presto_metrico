@@ -1,0 +1,15 @@
+version: 2
+
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.12.5
+    steps:
+      - checkout
+      - run: go build -o presto_metrico
+  test:
+    docker:
+      - image: circleci/golang:1.12.5
+    steps:
+      - checkout
+      - run: go test -v

@@ -1,0 +1,2 @@
+# github.com/DataDog/datadog-go v2.2.0+incompatible
+github.com/DataDog/datadog-go/statsd

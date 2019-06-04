@@ -1,7 +1,9 @@
-FROM golang:latest
-RUN mkdir /app
-ADD . /app/
+FROM golang:1.12.5
+
 WORKDIR /app
-RUN go get github.com/tools/godep
-RUN godep go build -o presto_metrico .
-CMD ["/app/presto_metrico"]
+COPY . .
+
+RUN go build -o presto_metrico \
+        && go test -v
+
+ENTRYPOINT "/app/presto_metrico"
